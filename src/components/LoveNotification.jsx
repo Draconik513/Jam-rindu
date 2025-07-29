@@ -27,18 +27,11 @@ export default function LoveNotification({ message, sender, media, mediaType, on
                     alt="Pesan cinta" 
                     className="max-h-40 w-full rounded-lg object-cover"
                   />
-                ) : mediaType === 'video' ? (
+                ) : (
                   <video 
                     src={media} 
                     controls 
                     className="max-h-40 w-full rounded-lg"
-                  />
-                ) : (
-                  <audio 
-                    src={media} 
-                    controls 
-                    autoPlay
-                    className="w-full mt-2"
                   />
                 )}
               </div>
@@ -60,7 +53,7 @@ export default function LoveNotification({ message, sender, media, mediaType, on
             {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           <span className="text-xs opacity-80">
-            {mediaType === 'audio' ? '🎵' : '💌'}
+            {mediaType === 'image' ? '📸' : mediaType === 'video' ? '🎥' : '💌'}
           </span>
         </div>
       </div>

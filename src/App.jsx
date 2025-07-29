@@ -6,6 +6,8 @@ import BackgroundEffect from "./components/BackgroundEffect";
 import NotificationHistory from "./components/NotificationHistory";
 import NotificationForm from "./components/NotificationForm";
 import UpcomingMessages from "./components/UpcomingMessages";
+import MessageList from "./components/MessageList";
+import SendMessage from "./components/SendMessage";
 
 export default function App() {
   const [startDate] = useState(new Date("2023-01-01T00:00:00"));
@@ -17,6 +19,7 @@ export default function App() {
   const [hiddenNotifications, setHiddenNotifications] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [senderName, setSenderName] = useState("Abi"); // Default sender name
 
   // Load saved notifications
   useEffect(() => {
@@ -109,6 +112,14 @@ export default function App() {
 
         <div className="w-full max-w-lg">
           <UpcomingMessages hiddenNotifications={hiddenNotifications} />
+          
+          {/* Realtime Messages Section */}
+          <div className="bg-white p-6 rounded-xl shadow-lg mb-6">
+            <h2 className="text-xl font-bold text-pink-600 mb-4">Pesan Langsung</h2>
+            <MessageList />
+            <SendMessage senderName={senderName} />
+          </div>
+          
           <LoveMessages />
         </div>
 
@@ -147,7 +158,8 @@ export default function App() {
         <LoveNotification
           message={notificationMessage}
           sender={notificationSender}
-          media={notificationMedia}
+          media={notificationMedia?.url}
+          mediaType={notificationMedia?.type}
           onClose={() => setShowNotification(false)}
         />
       )}
