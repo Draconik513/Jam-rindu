@@ -4,13 +4,13 @@ import { getDatabase, ref, push, onValue, off, update } from "firebase/database"
 
 // Konfigurasi Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyCe52IjZGMTjksHRizfK9z53P7-atY9aFM",
-  authDomain: "jam-rindu.firebaseapp.com",
-  databaseURL: "https://jam-rindu-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "jam-rindu",
-  storageBucket: "jam-rindu.appspot.com",
-  messagingSenderId: "361620759028",
-  appId: "1:361620759028:web:c45ec826a4ca41543359a1"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Inisialisasi Firebase App
