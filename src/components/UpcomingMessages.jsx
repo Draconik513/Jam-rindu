@@ -1,3 +1,5 @@
+import { users } from '../data/users';
+
 export default function UpcomingMessages({ hiddenNotifications }) {
   if (hiddenNotifications.length === 0) return null;
 
@@ -20,7 +22,9 @@ export default function UpcomingMessages({ hiddenNotifications }) {
             </div>
             <div>
               <p className="font-medium">
-                Dari: <span className="text-pink-600">{notif.senderName}</span>
+                Dari: <span className={users[notif.sender].textColor}>
+                  {users[notif.sender].name}
+                </span>
               </p>
               <div className="flex gap-2 mt-1">
                 <span className="text-xs bg-pink-50 text-pink-600 px-2 py-0.5 rounded-full">
@@ -39,3 +43,4 @@ export default function UpcomingMessages({ hiddenNotifications }) {
     </div>
   );
 }
+

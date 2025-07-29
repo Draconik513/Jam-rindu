@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { db, ref, onValue, off } from '../firebase';
+import { users } from '../data/users';
 
-export default function MessageList() {
+export default function MessageList({ currentUser }) {
   const [messages, setMessages] = useState([]);
 
   useEffect(() => {
@@ -10,7 +11,6 @@ export default function MessageList() {
     const handleData = (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Convert object to array and sort by timestamp
         const messageList = Object.entries(data).map(([id, msg]) => ({
           id,
           ...msg
@@ -33,10 +33,16 @@ export default function MessageList() {
         messages.map((msg) => (
           <div 
             key={msg.id} 
-            className={`p-4 rounded-lg ${msg.sender === 'Abi' ? 'bg-pink-100 ml-auto' : 'bg-gray-100 mr-auto'}`}
+            className={`p-4 rounded-lg max-w-xs ${
+              msg.senderId === currentUser 
+                ? `${users[currentUser].bgColor} ml-auto` 
+                : `${users[currentUser === 'abi' ? 'tiwi' : 'abi'].bgColor} mr-auto`
+            }`}
           >
             <div className="flex justify-between items-start">
-              <p className="font-bold text-pink-600">{msg.sender}</p>
+              <p className={`font-bold ${users[msg.senderId === currentUser ? currentUser : currentUser === 'abi' ? 'tiwi' : 'abi'].textColor}`}>
+                {msg.sender}
+              </p>
               <p className="text-xs text-gray-500">
                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { db, ref, push } from '../firebase';
+import { ref, push } from 'firebase/database';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-export default function SendMessage({ senderName }) {
+export default function SendMessage({ senderName, currentUser }) {
   const [message, setMessage] = useState('');
   const [media, setMedia] = useState(null);
   const [mediaType, setMediaType] = useState(null);
@@ -30,7 +30,6 @@ export default function SendMessage({ senderName }) {
     try {
       let mediaUrl = '';
       
-      // Upload media if exists
       if (media) {
         const storage = getStorage();
         const fileRef = storageRef(storage, `messages/${Date.now()}_${media.name}`);
@@ -38,14 +37,13 @@ export default function SendMessage({ senderName }) {
         mediaUrl = await getDownloadURL(fileRef);
       }
 
-      // Push message to Realtime Database
       await push(ref(db, 'messages'), {
         sender: senderName,
+        senderId: currentUser,
         text: message,
         media: media ? mediaUrl : null,
         mediaType,
-        timestamp: new Date().toISOString(),
-        isScheduled: false
+        timestamp: new Date().toISOString()
       });
 
       setMessage('');
@@ -122,3 +120,4 @@ export default function SendMessage({ senderName }) {
     </form>
   );
 }
+

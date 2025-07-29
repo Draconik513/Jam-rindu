@@ -2,12 +2,11 @@ import { useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-export default function NotificationForm({ onAddNotification, onClose }) {
-  const [senderName, setSenderName] = useState('');
+export default function NotificationForm({ onAddNotification, onClose, currentUser }) {
   const [message, setMessage] = useState('');
   const [scheduledDateTime, setScheduledDateTime] = useState(() => {
     const now = new Date();
-    now.setMinutes(now.getMinutes() + 5); // Default to 5 minutes from now
+    now.setMinutes(now.getMinutes() + 5);
     return now;
   });
   const [media, setMedia] = useState(null);
@@ -37,11 +36,6 @@ export default function NotificationForm({ onAddNotification, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!senderName.trim()) {
-      setError('Nama pengirim harus diisi');
-      return;
-    }
-    
     if (!message.trim() && !media) {
       setError('Pesan atau media harus diisi');
       return;
@@ -53,14 +47,13 @@ export default function NotificationForm({ onAddNotification, onClose }) {
     }
     
     const notificationData = {
-      senderName: senderName.trim(),
       message: message.trim(),
       scheduledDate: scheduledDateTime.toISOString(),
-      scheduledTime: scheduledDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      media: media ? null : null,
+      media: null,
       mediaType,
       isHidden,
-      isOneTime: isHidden ? isOneTime : false
+      isOneTime: isHidden ? isOneTime : false,
+      createdAt: new Date().toISOString()
     };
 
     if (media) {
@@ -88,18 +81,6 @@ export default function NotificationForm({ onAddNotification, onClose }) {
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-pink-700 mb-1">Dari Siapa?*</label>
-            <input
-              type="text"
-              value={senderName}
-              onChange={(e) => setSenderName(e.target.value)}
-              className="w-full p-3 border border-pink-300 rounded-lg focus:ring-2 focus:ring-pink-500"
-              placeholder="Nama kamu (contoh: Abi)"
-              required
-            />
-          </div>
-
           <div>
             <label className="block text-pink-700 mb-1">Pesan (opsional)</label>
             <textarea
