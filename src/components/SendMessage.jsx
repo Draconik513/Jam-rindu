@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ref, push } from 'firebase/database';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from './firebase';
+import { db, storage } from '../firebase';
 
 export default function SendMessage({ senderName, currentUser }) {
   const [message, setMessage] = useState('');
@@ -23,15 +24,16 @@ export default function SendMessage({ senderName, currentUser }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!message.trim() && !media) return;
-
-    setIsSending(true);
+    if (!message.trim() && !media) {
+      alert('Harap isi pesan atau unggah media!');
+      return;
+    }
 
     try {
-      let mediaUrl = '';
+      setIsSending(true);
       
+      let mediaUrl = '';
       if (media) {
-        const storage = getStorage();
         const fileRef = storageRef(storage, `messages/${Date.now()}_${media.name}`);
         await uploadBytes(fileRef, media);
         mediaUrl = await getDownloadURL(fileRef);
@@ -50,7 +52,8 @@ export default function SendMessage({ senderName, currentUser }) {
       setMedia(null);
       setMediaType(null);
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("Gagal mengirim pesan:", error);
+      alert("Gagal mengirim pesan. Cek console untuk detail.");
     } finally {
       setIsSending(false);
     }
@@ -120,4 +123,3 @@ export default function SendMessage({ senderName, currentUser }) {
     </form>
   );
 }
-

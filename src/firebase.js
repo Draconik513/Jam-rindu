@@ -1,8 +1,7 @@
-// firebase.js
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, push, onValue, off, update } from "firebase/database";
+import { getDatabase, ref, push, onValue, off, update, remove, query, orderByChild, equalTo } from "firebase/database";
+import { getStorage } from "firebase/storage";
 
-// Konfigurasi Firebase
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -13,11 +12,8 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Inisialisasi Firebase App
 const app = initializeApp(firebaseConfig);
-
-// Dapatkan Realtime Database instance
 const db = getDatabase(app);
+const storage = getStorage(app);
 
-// Ekspor fungsi-fungsi dan db-nya
-export { db, ref, push, onValue, off, update };
+export { db, storage, ref, push, onValue, off, update, remove, query, orderByChild, equalTo };

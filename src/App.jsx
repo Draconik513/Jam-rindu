@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { db, ref, push, onValue, update } from "./firebase"; // sudah lengkap
+import { db, ref, push, onValue, off, update, remove, query, orderByChild, equalTo } from "./firebase";
 import { users } from "./data/users";
 import LoveTimer from "./components/LoveTimer";
 import LoveMessages from "./components/LoveMessages";
@@ -17,6 +17,7 @@ export default function App() {
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationMedia, setNotificationMedia] = useState(null);
   const [notificationSender, setNotificationSender] = useState("");
+  const [messages, setMessages] = useState([]);
   const [notificationHistory, setNotificationHistory] = useState([]);
   const [hiddenNotifications, setHiddenNotifications] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -24,71 +25,82 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState("abi");
   const [targetUser, setTargetUser] = useState("tiwi");
 
-  // Load messages from Firebase
+  // Load direct messages
   useEffect(() => {
-    // Load direct messages
     const messagesRef = ref(db, 'messages');
-    onValue(messagesRef, (snapshot) => {
+    const handleData = (snapshot) => {
       const data = snapshot.val();
       setMessages(data ? Object.values(data) : []);
-    });
-
-    // Load secret messages
-    const secretRef = ref(db, 'secret_messages');
-    onValue(secretRef, (snapshot) => {
-      const data = snapshot.val();
-      const allMessages = data ? Object.values(data) : [];
-      
-      // Filter messages for current user
-      const userMessages = allMessages.filter(msg => 
-        msg.receiver === currentUser || msg.sender === currentUser
-      );
-      
-      setNotificationHistory(userMessages);
-      setHiddenNotifications(userMessages.filter(msg => msg.isHidden));
-    });
-
-    return () => {
-      off(messagesRef);
-      off(secretRef);
     };
+    onValue(messagesRef, handleData);
+    return () => off(messagesRef, 'value', handleData);
+  }, []);
+
+  // Load secret messages
+  useEffect(() => {
+    const secretRef = query(
+      ref(db, 'secret_messages'),
+      orderByChild('receiver'),
+      equalTo(currentUser)
+    );
+
+    const handleSecretData = (snapshot) => {
+      const data = snapshot.val() || {};
+      const visibleMessages = [];
+      const hiddenMessages = [];
+
+      Object.entries(data).forEach(([id, msg]) => {
+        const msgWithId = { ...msg, id };
+        if (msg.isHidden === false || new Date(msg.scheduledDate) <= new Date()) {
+          visibleMessages.push(msgWithId);
+        } else {
+          hiddenMessages.push(msgWithId);
+        }
+      });
+
+      setNotificationHistory(visibleMessages);
+      setHiddenNotifications(hiddenMessages);
+    };
+
+    onValue(secretRef, handleSecretData);
+    return () => off(secretRef, 'value', handleSecretData);
   }, [currentUser]);
 
   // Check for scheduled notifications
   useEffect(() => {
     const checkScheduledMessages = () => {
-      const now = new Date();
+      const now = new Date().getTime();
       const secretRef = ref(db, 'secret_messages');
       
       onValue(secretRef, (snapshot) => {
         const messages = snapshot.val() || {};
         
         Object.entries(messages).forEach(([id, msg]) => {
-          if (new Date(msg.scheduledDate) <= now && msg.isHidden && msg.receiver === currentUser) {
-            // Show notification
+          const scheduledTime = new Date(msg.scheduledDate).getTime();
+          if (scheduledTime <= now && msg.isHidden && msg.receiver === currentUser) {
             setNotificationMessage(msg.message);
             setNotificationSender(users[msg.sender].name);
+            setNotificationMedia(msg.media || null);
             setShowNotification(true);
-
-            // Update status in Firebase
-            update(ref(db, `secret_messages/${id}`), { isHidden: false });
             
-            setTimeout(() => setShowNotification(false), 10000);
+            update(ref(db, `secret_messages/${id}`), { 
+              isHidden: false,
+              deliveredAt: new Date().toISOString() 
+            });
           }
         });
       });
     };
 
-    const interval = setInterval(checkScheduledMessages, 60000);
-    checkScheduledMessages(); // Check immediately on load
-    
+    const interval = setInterval(checkScheduledMessages, 30000);
+    checkScheduledMessages();
     return () => clearInterval(interval);
   }, [currentUser]);
 
   const handleAddNotification = (newNotification) => {
     const notificationWithId = {
       ...newNotification,
-      id: Date.now(),
+      id: Date.now().toString(),
       sender: currentUser,
       receiver: targetUser,
       isHidden: newNotification.isHidden,
@@ -100,7 +112,8 @@ export default function App() {
   };
 
   const handleDeleteNotification = (id) => {
-    remove(ref(db, `secret_messages/${id}`));
+    remove(ref(db, `secret_messages/${id}`))
+      .catch(error => console.error("Gagal menghapus:", error));
   };
 
   return (
@@ -144,7 +157,7 @@ export default function App() {
           {/* Realtime Messages Section */}
           <div className="bg-white p-6 rounded-xl shadow-lg mb-6">
             <h2 className="text-xl font-bold text-pink-600 mb-4">Pesan Langsung</h2>
-            <MessageList currentUser={currentUser} />
+            <MessageList messages={messages} currentUser={currentUser} />
             <SendMessage senderName={users[currentUser].name} currentUser={currentUser} />
           </div>
           
@@ -195,4 +208,3 @@ export default function App() {
     </div>
   );
 }
-

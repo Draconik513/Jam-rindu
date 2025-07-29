@@ -1,30 +1,7 @@
 import { useEffect, useState } from 'react';
-import { db, ref, onValue, off } from '../firebase';
 import { users } from '../data/users';
 
-export default function MessageList({ currentUser }) {
-  const [messages, setMessages] = useState([]);
-
-  useEffect(() => {
-    const messagesRef = ref(db, 'messages');
-    
-    const handleData = (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const messageList = Object.entries(data).map(([id, msg]) => ({
-          id,
-          ...msg
-        })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        
-        setMessages(messageList);
-      }
-    };
-
-    onValue(messagesRef, handleData);
-
-    return () => off(messagesRef, 'value', handleData);
-  }, []);
-
+export default function MessageList({ messages, currentUser }) {
   return (
     <div className="space-y-4 max-h-96 overflow-y-auto p-2">
       {messages.length === 0 ? (
@@ -32,15 +9,15 @@ export default function MessageList({ currentUser }) {
       ) : (
         messages.map((msg) => (
           <div 
-            key={msg.id} 
+            key={msg.timestamp} 
             className={`p-4 rounded-lg max-w-xs ${
               msg.senderId === currentUser 
-                ? `${users[currentUser].bgColor} ml-auto` 
-                : `${users[currentUser === 'abi' ? 'tiwi' : 'abi'].bgColor} mr-auto`
+                ? `${users[currentUser].bgColor || 'bg-pink-100'} ml-auto` 
+                : `${users[currentUser === 'abi' ? 'tiwi' : 'abi'].bgColor || 'bg-gray-100'} mr-auto`
             }`}
           >
             <div className="flex justify-between items-start">
-              <p className={`font-bold ${users[msg.senderId === currentUser ? currentUser : currentUser === 'abi' ? 'tiwi' : 'abi'].textColor}`}>
+              <p className={`font-bold ${users[msg.senderId === currentUser ? currentUser : currentUser === 'abi' ? 'tiwi' : 'abi'].textColor || 'text-pink-600'}`}>
                 {msg.sender}
               </p>
               <p className="text-xs text-gray-500">
