@@ -28,6 +28,7 @@ export default function App() {
     }
   }, []);
 
+  
   // Scheduled notifications check
   useEffect(() => {
     const checkScheduledNotifications = () => {
