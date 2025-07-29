@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { db, ref, push, onValue, update } from "firebase/database";
+import { db, ref, push, onValue, update } from "./firebase"; // sudah lengkap
 import { users } from "./data/users";
 import LoveTimer from "./components/LoveTimer";
 import LoveMessages from "./components/LoveMessages";
