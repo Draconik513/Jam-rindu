@@ -4,16 +4,20 @@ export default function LoveNotification({ message, sender, media, mediaType, on
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
+    setIsVisible(true); // Ensure notification shows immediately
+    
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(onClose, 500);
     }, 10000);
 
     return () => clearTimeout(timer);
-  }, [onClose]);
+  }, [message, sender, media, onClose]); // Add dependencies to reset timer when new notification comes
+
+  if (!isVisible) return null;
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 ${isVisible ? 'animate-float' : 'opacity-0 transition-opacity duration-500'}`}>
+    <div className={`fixed bottom-4 right-4 z-50 animate-float`}>
       <div className="bg-pink-500 text-white px-6 py-4 rounded-lg shadow-xl max-w-xs transform transition-transform hover:scale-105">
         <div className="flex justify-between items-start">
           <div className="flex-1">
