@@ -8,10 +8,20 @@ export default function SendMessage({ senderName, currentUser }) {
   const [media, setMedia] = useState(null);
   const [mediaType, setMediaType] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleMediaChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type and size
+      if (!file.type.match('image.*|video.*')) {
+        alert('Hanya gambar atau video yang diperbolehkan!');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        alert('Ukuran file maksimal 10MB!');
+        return;
+      }
       setMedia(file);
       setMediaType(file.type.startsWith('image') ? 'image' : 'video');
     }
@@ -20,6 +30,7 @@ export default function SendMessage({ senderName, currentUser }) {
   const handleRemoveMedia = () => {
     setMedia(null);
     setMediaType(null);
+    setUploadProgress(0);
   };
 
   const handleSubmit = async (e) => {
@@ -31,26 +42,50 @@ export default function SendMessage({ senderName, currentUser }) {
 
     try {
       setIsSending(true);
+      setUploadProgress(0);
       
       let mediaUrl = '';
       if (media) {
+        const storage = getStorage();
         const fileRef = storageRef(storage, `messages/${Date.now()}_${media.name}`);
-        await uploadBytes(fileRef, media);
+        
+        // Upload file with progress tracking
+        const uploadTask = uploadBytes(fileRef, media);
+        
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(progress);
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            alert("Gagal mengunggah media");
+            throw error;
+          }
+        );
+
+        await uploadTask;
         mediaUrl = await getDownloadURL(fileRef);
       }
 
-      await push(ref(db, 'messages'), {
+      const newMessage = {
         sender: senderName,
         senderId: currentUser,
         text: message,
         media: media ? mediaUrl : null,
         mediaType,
         timestamp: new Date().toISOString()
-      });
+      };
 
+      // Push to Firebase
+      const messageRef = push(ref(db, 'messages'));
+      await update(messageRef, { ...newMessage, id: messageRef.key });
+
+      // Reset form
       setMessage('');
       setMedia(null);
       setMediaType(null);
+      setUploadProgress(0);
     } catch (error) {
       console.error("Gagal mengirim pesan:", error);
       alert("Gagal mengirim pesan. Cek console untuk detail.");
@@ -91,6 +126,15 @@ export default function SendMessage({ senderName, currentUser }) {
             </button>
           )}
         </div>
+        
+        {uploadProgress > 0 && uploadProgress < 100 && (
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div 
+              className="bg-pink-600 h-2.5 rounded-full" 
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+        )}
         
         {media && (
           <div className="mt-2">
