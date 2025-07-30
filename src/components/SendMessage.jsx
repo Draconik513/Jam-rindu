@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ref, push } from 'firebase/database';
+import { ref, push, set } from 'firebase/database';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 
@@ -8,87 +8,74 @@ export default function SendMessage({ senderName, currentUser }) {
   const [media, setMedia] = useState(null);
   const [mediaType, setMediaType] = useState(null);
   const [isSending, setIsSending] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState('');
 
   const handleMediaChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type and size
+      // Validasi tipe file
       if (!file.type.match('image.*|video.*')) {
-        alert('Hanya gambar atau video yang diperbolehkan!');
+        setError('Hanya gambar/video yang diperbolehkan');
         return;
       }
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        alert('Ukuran file maksimal 10MB!');
+      // Validasi ukuran file (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Ukuran file maksimal 5MB');
         return;
       }
       setMedia(file);
       setMediaType(file.type.startsWith('image') ? 'image' : 'video');
+      setError('');
     }
-  };
-
-  const handleRemoveMedia = () => {
-    setMedia(null);
-    setMediaType(null);
-    setUploadProgress(0);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    
     if (!message.trim() && !media) {
-      alert('Harap isi pesan atau unggah media!');
+      setError('Harap isi pesan atau unggah media');
       return;
     }
 
     try {
       setIsSending(true);
-      setUploadProgress(0);
       
       let mediaUrl = '';
       if (media) {
-        const storage = getStorage();
-        const fileRef = storageRef(storage, `messages/${Date.now()}_${media.name}`);
-        
-        // Upload file with progress tracking
-        const uploadTask = uploadBytes(fileRef, media);
-        
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-          },
-          (error) => {
-            console.error("Upload error:", error);
-            alert("Gagal mengunggah media");
-            throw error;
-          }
-        );
-
-        await uploadTask;
-        mediaUrl = await getDownloadURL(fileRef);
+        try {
+          const fileRef = storageRef(storage, `messages/${Date.now()}_${media.name}`);
+          await uploadBytes(fileRef, media);
+          mediaUrl = await getDownloadURL(fileRef);
+        } catch (uploadError) {
+          console.error("Error uploading media:", uploadError);
+          setError('Gagal mengunggah media');
+          return;
+        }
       }
 
-      const newMessage = {
+      // Buat reference baru dengan ID unik
+      const newMessageRef = push(ref(db, 'messages'));
+      
+      // Gunakan set() untuk menulis data
+      await set(newMessageRef, {
+        id: newMessageRef.key,
         sender: senderName,
         senderId: currentUser,
         text: message,
-        media: media ? mediaUrl : null,
+        media: mediaUrl || null,
         mediaType,
         timestamp: new Date().toISOString()
-      };
+      });
 
-      // Push to Firebase
-      const messageRef = push(ref(db, 'messages'));
-      await update(messageRef, { ...newMessage, id: messageRef.key });
-
-      // Reset form
+      // Reset form setelah berhasil
       setMessage('');
       setMedia(null);
       setMediaType(null);
-      setUploadProgress(0);
+      
     } catch (error) {
-      console.error("Gagal mengirim pesan:", error);
-      alert("Gagal mengirim pesan. Cek console untuk detail.");
+      console.error("Error sending message:", error);
+      setError('Gagal mengirim pesan: ' + error.message);
     } finally {
       setIsSending(false);
     }
@@ -96,6 +83,8 @@ export default function SendMessage({ senderName, currentUser }) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-4">
+      {error && <p className="text-red-500 mb-2">{error}</p>}
+      
       <div className="flex flex-col space-y-3">
         <input
           type="text"
@@ -103,38 +92,35 @@ export default function SendMessage({ senderName, currentUser }) {
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Tulis pesan cinta..."
           className="w-full p-3 border border-pink-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+          disabled={isSending}
         />
         
         <div className="flex items-center space-x-3">
-          <label className="cursor-pointer bg-pink-100 text-pink-600 px-3 py-2 rounded-lg hover:bg-pink-200 transition">
+          <label className={`cursor-pointer bg-pink-100 text-pink-600 px-3 py-2 rounded-lg hover:bg-pink-200 transition ${isSending ? 'opacity-50' : ''}`}>
             {media ? "Ganti Media" : "Tambahkan Media"}
             <input
               type="file"
               accept="image/*, video/*"
               onChange={handleMediaChange}
               className="hidden"
+              disabled={isSending}
             />
           </label>
           
           {media && (
             <button
               type="button"
-              onClick={handleRemoveMedia}
+              onClick={() => {
+                setMedia(null);
+                setMediaType(null);
+              }}
               className="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 transition"
+              disabled={isSending}
             >
               Hapus Media
             </button>
           )}
         </div>
-        
-        {uploadProgress > 0 && uploadProgress < 100 && (
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div 
-              className="bg-pink-600 h-2.5 rounded-full" 
-              style={{ width: `${uploadProgress}%` }}
-            ></div>
-          </div>
-        )}
         
         {media && (
           <div className="mt-2">
