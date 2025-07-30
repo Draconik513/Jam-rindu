@@ -52,6 +52,24 @@ export default function NotificationHistory({ notifications, onClose, onDelete, 
                   <p className="whitespace-pre-line">{selectedMessage.message}</p>
                 </div>
               )}
+
+              {selectedMessage.media && (
+                <div className="mt-3">
+                  {selectedMessage.mediaType === 'image' ? (
+                    <img 
+                      src={selectedMessage.media} 
+                      alt="Media pesan" 
+                      className="max-h-60 w-full rounded-lg object-contain"
+                    />
+                  ) : (
+                    <video 
+                      src={selectedMessage.media} 
+                      controls 
+                      className="max-h-60 w-full rounded-lg"
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-between pt-2">
@@ -61,17 +79,15 @@ export default function NotificationHistory({ notifications, onClose, onDelete, 
               >
                 Kembali
               </button>
-              {selectedMessage.sender === currentUser && (
-                <button
-                  onClick={(e) => {
-                    handleDelete(selectedMessage.id, e);
-                    setSelectedMessage(null);
-                  }}
-                  className="bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200 transition"
-                >
-                  Hapus Pesan
-                </button>
-              )}
+              <button
+                onClick={(e) => {
+                  handleDelete(selectedMessage.id, e);
+                  setSelectedMessage(null);
+                }}
+                className="bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200 transition"
+              >
+                Hapus Pesan
+              </button>
             </div>
           </div>
         ) : (
@@ -118,6 +134,11 @@ export default function NotificationHistory({ notifications, onClose, onDelete, 
                                 {notification.message}
                               </p>
                             )}
+                            {notification.media && (
+                              <span className="text-xs bg-pink-50 text-pink-600 px-2 py-0.5 rounded-full mt-1 inline-block">
+                                {notification.mediaType === 'image' ? '📸 Foto' : '🎥 Video'}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
@@ -129,10 +150,6 @@ export default function NotificationHistory({ notifications, onClose, onDelete, 
                 ))}
               </ul>
             )}
-
-            <div className="mt-4 text-center text-sm text-pink-600">
-              <p>Klik pesan untuk melihat detail</p>
-            </div>
           </>
         )}
       </div>
