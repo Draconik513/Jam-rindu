@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { db, ref, push, onValue, off, update, remove, query, orderByChild, equalTo } from "./firebase";
+import { db, ref, push, onValue, off, update, remove } from "./firebase";
 import { users } from "./data/users";
 import LoveTimer from "./components/LoveTimer";
 import LoveMessages from "./components/LoveMessages";
@@ -36,27 +36,25 @@ export default function App() {
     return () => off(messagesRef, 'value', handleData);
   }, []);
 
-  // Load secret messages
+  // Load secret messages for both sender and receiver
   useEffect(() => {
-    const secretRef = query(
-      ref(db, 'secret_messages'),
-      orderByChild('receiver'),
-      equalTo(currentUser)
-    );
+    const secretRef = ref(db, 'secret_messages');
 
     const handleSecretData = (snapshot) => {
       const data = snapshot.val() || {};
-      const visibleMessages = [];
-      const hiddenMessages = [];
+      const allMessages = Object.entries(data).map(([id, msg]) => ({ ...msg, id }));
 
-      Object.entries(data).forEach(([id, msg]) => {
-        const msgWithId = { ...msg, id };
-        if (msg.isHidden === false || new Date(msg.scheduledDate) <= new Date()) {
-          visibleMessages.push(msgWithId);
-        } else {
-          hiddenMessages.push(msgWithId);
-        }
-      });
+      const userMessages = allMessages.filter(msg =>
+        msg.receiver === currentUser || msg.sender === currentUser
+      );
+
+      const visibleMessages = userMessages.filter(msg =>
+        msg.isHidden === false || new Date(msg.scheduledDate) <= new Date()
+      );
+
+      const hiddenMessages = userMessages.filter(msg =>
+        msg.isHidden === true && new Date(msg.scheduledDate) > new Date()
+      );
 
       setNotificationHistory(visibleMessages);
       setHiddenNotifications(hiddenMessages);
@@ -66,26 +64,28 @@ export default function App() {
     return () => off(secretRef, 'value', handleSecretData);
   }, [currentUser]);
 
-  // Check for scheduled notifications
+  // Check for scheduled notifications for currentUser only
   useEffect(() => {
     const checkScheduledMessages = () => {
       const now = new Date().getTime();
       const secretRef = ref(db, 'secret_messages');
-      
+
       onValue(secretRef, (snapshot) => {
         const messages = snapshot.val() || {};
-        
+
         Object.entries(messages).forEach(([id, msg]) => {
           const scheduledTime = new Date(msg.scheduledDate).getTime();
-          if (scheduledTime <= now && msg.isHidden && msg.receiver === currentUser) {
+          const isForCurrentUser = msg.receiver === currentUser;
+
+          if (scheduledTime <= now && msg.isHidden && isForCurrentUser) {
             setNotificationMessage(msg.message);
             setNotificationSender(users[msg.sender].name);
             setNotificationMedia(msg.media || null);
             setShowNotification(true);
-            
-            update(ref(db, `secret_messages/${id}`), { 
+
+            update(ref(db, `secret_messages/${id}`), {
               isHidden: false,
-              deliveredAt: new Date().toISOString() 
+              deliveredAt: new Date().toISOString()
             });
           }
         });
@@ -119,7 +119,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-pink-50 text-pink-900 overflow-x-hidden relative">
       <BackgroundEffect />
-      
+
       <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center font-serif">
           Jam Rindu Kita
@@ -127,21 +127,21 @@ export default function App() {
 
         {/* User Switch */}
         <div className="flex gap-2 mb-4">
-          <button 
-            onClick={() => setCurrentUser("abi")} 
+          <button
+            onClick={() => setCurrentUser("abi")}
             className={`px-4 py-2 rounded-lg transition-colors ${
-              currentUser === "abi" 
-                ? "bg-pink-600 text-white" 
+              currentUser === "abi"
+                ? "bg-pink-600 text-white"
                 : "bg-gray-200 hover:bg-gray-300"
             }`}
           >
             Abi
           </button>
-          <button 
-            onClick={() => setCurrentUser("tiwi")} 
+          <button
+            onClick={() => setCurrentUser("tiwi")}
             className={`px-4 py-2 rounded-lg transition-colors ${
-              currentUser === "tiwi" 
-                ? "bg-teal-500 text-white" 
+              currentUser === "tiwi"
+                ? "bg-teal-500 text-white"
                 : "bg-gray-200 hover:bg-gray-300"
             }`}
           >
@@ -153,14 +153,14 @@ export default function App() {
 
         <div className="w-full max-w-lg">
           <UpcomingMessages hiddenNotifications={hiddenNotifications} />
-          
+
           {/* Realtime Messages Section */}
           <div className="bg-white p-6 rounded-xl shadow-lg mb-6">
             <h2 className="text-xl font-bold text-pink-600 mb-4">Pesan Langsung</h2>
             <MessageList messages={messages} currentUser={currentUser} />
             <SendMessage senderName={users[currentUser].name} currentUser={currentUser} />
           </div>
-          
+
           <LoveMessages />
         </div>
 
